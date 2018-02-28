@@ -1,6 +1,8 @@
 package chapter12
 
-import chapter11.Functor
+import chapter10.Monoid
+import chapter11.{Functor, Id}
+
 
 trait Applicative[F[_]] extends Functor[F] {
   // primitive combinators
@@ -8,7 +10,7 @@ trait Applicative[F[_]] extends Functor[F] {
   def unit[A](a: => A): F[A]
 
   // derived combinators
-  def map[A, B](fa: F[A])(f: A => B): F[B] = apply(unit(f))(fa)
+  override def map[A, B](fa: F[A])(f: A => B): F[B] = apply(unit(f))(fa)
 
   def traverse[A, B](as: List[A])(f: A => F[B]): F[List[B]] =
     as.foldRight(unit(List[B]()))((a, fbs) => map2(f(a), fbs)(_ :: _))
@@ -55,7 +57,20 @@ trait Applicative[F[_]] extends Functor[F] {
   }
 
   // Ex 12.9
-  def compose[G[_]](G: Applicative[G])
+  def compose[G[_]](G: Applicative[G]) = {
+    val self = this
+    new Applicative[({type f[x] = F[G[x]]})#f] {
+      def unit[A](ca: => A): F[G[A]] = self.unit(G.unit(ca))
+
+      def apply[A, B](cab: F[G[A => B]])(ca: F[G[A]]): F[G[B]] = self.map2(cab, ca)(G.apply(_)(_))
+    }
+  }
+
+  // Ex 12.12
+  def sequenceMap[K, V](ofa: Map[K, F[V]]): F[Map[K, V]] =
+    ofa.keySet.foldRight(this.unit(Map[K, V]()))((k, wrapped) =>
+      map2(wrapped, ofa(k))(_.updated(k, _))
+    )
 }
 
 
@@ -70,6 +85,13 @@ object Applicative {
       case (Failure(eh, et), _) => Failure(eh, et)
       case (_, Failure(eh, et))=> Failure(eh, et)
     }
+  }
+
+  // For Ex 12.14
+  def idApplicative: Applicative[Id] = new Applicative[Id] {
+    def unit[A](a: => A) = Id.apply(a)
+
+    def apply[A, B](fab: Id[A => B])(fa: Id[A]): Id[B] = fa.flatMap(a => fab.map(f => f(a)))
   }
 }
 

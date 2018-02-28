@@ -14,6 +14,8 @@ trait Monad[F[_]] extends Applicative[F] {
 
   override def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] =
     flatMap(fa)(a => map(fb)(b => f(a, b)))
+
+  def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = map2(fab, fa)((aToB, a) => aToB(a))
 }
 
 object Monad {
