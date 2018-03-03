@@ -10,6 +10,10 @@ case class State[S, +A](run: S => (A, S)) {
   })
 
   def map[B](f: A => B): State[S, B] = flatMap(f andThen unit)
+
+  def get[S]: State[S, S] = State(s => (s, s))
+
+  def set[S](s: S): State[S, Unit] = State(_ => ((), s))
 }
 
 object State {
@@ -22,6 +26,3 @@ object State {
   def sequence[A, S](list: List[State[S, A]]): State[S, List[A]] =
     list.foldRight(unit[List[A], S](Nil))((a, b) => map2(a, b)(_::_))
 }
-
-
-// Ex 6.11 TODO
