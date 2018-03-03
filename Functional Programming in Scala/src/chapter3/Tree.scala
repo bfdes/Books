@@ -1,6 +1,6 @@
 package chapter3
 
-// Tree, like List, is an example of an ADT 9Algebraic Data Type).
+// Tree, like List, is an example of an ADT (Algebraic Data Type).
 // An ADT is defined by one or more data constructors.
 // The type is the sum of its constructors, and each data constructor is the product of its arguments.
 sealed trait Tree[+A] {
