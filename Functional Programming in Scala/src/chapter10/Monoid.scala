@@ -56,6 +56,7 @@ object Monoid {
   }
 
   // Ex 10.4 TODO
+  // Need to do chapter 8 first
 
   def concatenate[A](list: List[A], m: Monoid[A]): A =
     list.foldLeft(m.zero)(m.op)
@@ -84,6 +85,7 @@ object Monoid {
     }
 
   // Ex 10.8 TODO
+  // Need to do chapter 7 first
 
   // Ex 10.9
   // Represent each possibly ordered section with Some(min, max, isOrdered), None if an empty section
