@@ -46,6 +46,21 @@ trait Monad[M[_]] extends Functor[M]{
 }
 
 object Monad {
+  // Ex 11.20
+  // A Reader instance represents a computation that takes some connection and maps it to a value.
+  def readerMonad[R] = new Monad[({type f[x] = Reader[R, x]})#f] {
+    // Creates a reader instance that ignores its input and returns a value
+    def unit[A](a: => A): Reader[R, A] = Reader(_ => a)
+
+    // Merges two readers, re-using the connection
+    def flatMap[A, B](st: Reader[R, A])(f: A => Reader[R, B]): Reader[R, B] = Reader(r => {
+      val a = st.run(r)
+      f(a).run(r)
+    })
+
+    // Join merges two nested readers and returns a reader that chains them.
+    // Sequence takes a multitude of readers and creates a single reader that takes one connection.
+  }
 }
 
 // Ex 11.9
