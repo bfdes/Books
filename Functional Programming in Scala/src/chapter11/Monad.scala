@@ -49,19 +49,76 @@ object Monad {
 }
 
 // Ex 11.9
-// Paper exercise. Remember to convert to infix notation.
+/*
+Associativity laws.
+We show the two formulations, in terms of flatMap and compose, are equivalent.
 
-// Ex 11.10, 11.11
-// Paper exercise.
+Assume compose(compose(f, g), h) = compose(f, compose(g, h)).
+Working with the LHS:
+compose(compose(f, g), h) = a -> flatMap(compose(f, g)(a))(h)
+                          = a -> flatMap(flatMap(f(a))(g))(h)
+                          = a -> f(a).flatMap(g).flatMap(h) after converting to infix notation.
+Working with the RHS:
+compose(f, compose(g, h)) = a -> flatMap(f(a))(b -> flatMap(g(b))(h))
+                          = a -> f(a).flatMap(b -> g(b).flatMap(h))
+If we let x = f(a) this gives x.flatMap(g)(h) = x.flatMap(b -> g(b).flatMap(h)), which is what we were after.
+
+Now assume the above result instead.
+x.flatMap(g).flatMap(h)
+=> a -> f(a).flatMap(g).flatMap(h) = a -> (compose(f, g)(a)).flatMap(h)
+                                   = compose(compose(f, g), h)
+Working with the RHS,
+a -> f(a).flatMap(b -> g(b).flatMap(h)) = a -> f(a).flatMap(compose(g, h))
+                                        = compose(f, compose(g, h)).
+This gets us back to where we started. QED.
+ */
+
+// Ex 11.10
+/*
+Identity laws.
+We show that the two formulations, in terms of flatMap and compose, are equivalent.
+
+Assume compose(f, unit) = f (Left identity) and compose(unit, f) = f (Right identity).
+Then the left identity gives a -> flatMap(f(a))(unit) = f. Applying a to both sides yields
+flatMap(f(a))(unit) = f(a) or flatMap(x)(unit) = x if one lets x = f(a).
+
+The right identity gives a -> flatMap(unit(a))(f) = f or flatMap(unit(a))(f) = f(a).
+
+Now assume the flatMap formulations hold instead.
+flatMap(x)(unit) = x => a -> flatMap(f(a))(unit) = f or compose(f, unit) = f.
+flatMap(unit(a))(f) = f(a) => a -> flatMap(unit(a))(f) = f or compose(unit, f) = f.
+ */
+
+
+// Ex 11.11
+/*
+We prove that the Identity laws hold for Option as Monad.
+In the flatMap formulation flatMap(x)(unit) = x and flatMap(unit(a))(f) = f(a).
+
+If x = None then the left identity holds trivially.
+If x = Some(a) then flatMap(x)(unit) = flatMap(Some(a))(Some(_)) = Some(a) = x.
+
+And the right identity simplifies to flatMap(unit(a))(f) = flatMap(Some(a))(f) = f(a).
+If f(a) = None then both sides agree. If f(a) = Some(b) then both sides still agree.
+ */
+
 
 // Ex 11.14 Very messy when not written in terms of compose...
 // Identity: join(map(x)(unit)) == x and join(map(unit(y))(f)) == f(y)
 // Associativity: join(map(join(map(x)(f)))(g)) == join(map(x)(a => join(map(f(a))(g))))
 
 // Ex 11.15 TODO
+// Need to complete chapters 7 and 8 first
 
-// Ex 11.16
+// Ex 11.16 Strange exercise.
 
 // Ex 11.18
+/*
+The signatures are
+- def replicateM[A](n: Int, ma: State[A]): State[List[A]]
+- def map2[A, B, C](ma: State[A], mb: State[B])(f: (A, B) => C): State[C]
+- def sequence[A](list: List[State[A]]): State[List[A]]
+Another strange exercise.
+ */
 
-// Ex 11.19
+// Ex 11.19 TODO
