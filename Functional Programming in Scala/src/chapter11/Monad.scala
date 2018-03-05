@@ -76,7 +76,7 @@ compose(compose(f, g), h) = a -> flatMap(compose(f, g)(a))(h)
 Working with the RHS:
 compose(f, compose(g, h)) = a -> flatMap(f(a))(b -> flatMap(g(b))(h))
                           = a -> f(a).flatMap(b -> g(b).flatMap(h))
-If we let x = f(a) this gives x.flatMap(g)(h) = x.flatMap(b -> g(b).flatMap(h)), which is what we were after.
+If we let x = f(a) this gives x.flatMap(g).flatMap(h) = x.flatMap(b -> g(b).flatMap(h)), which is what we were after.
 
 Now assume the above result instead.
 x.flatMap(g).flatMap(h)
