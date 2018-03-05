@@ -1,16 +1,17 @@
 package chapter12
 
-import chapter10.Monoid
 import chapter11.{Functor, Id}
+import language.higherKinds
+import language.implicitConversions
 
 
 trait Applicative[F[_]] extends Functor[F] {
   // primitive combinators
-  def apply[A, B](fab: F[A => B])(fa: F[A]): F[B]
+  def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = map2(fab, fa)((aToB, a) => aToB(a))
   def unit[A](a: => A): F[A]
 
   // derived combinators
-  override def map[A, B](fa: F[A])(f: A => B): F[B] = apply(unit(f))(fa)
+  def map[A, B](fa: F[A])(f: A => B): F[B] = apply(unit(f))(fa)
 
   def traverse[A, B](as: List[A])(f: A => F[B]): F[List[B]] =
     as.foldRight(unit(List[B]()))((a, fbs) => map2(f(a), fbs)(_ :: _))
@@ -28,7 +29,7 @@ trait Applicative[F[_]] extends Functor[F] {
   // Of course, apply can also be defined in terms of map2 (unit isn't needed) primitives
   // def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = map2(fab, fa)((aToB, a) => aToB(a))
 
-  // def map[A, B](fa: F[A])(f: A => B): F[B] = map2(fa, unit(()))((a, _) => f(a))
+  def map[A, B](fa: F[A])(f: A => B): F[B] = map2(fa, unit(()))((a, _) => f(a))
 
   def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = apply(map(fa)(f.curried))(fb)
 
@@ -46,12 +47,12 @@ trait Applicative[F[_]] extends Functor[F] {
   }
 
   // Ex 12.8
-  def product[G[_]](G: Applicative[G]) = {
+  def product[G[_]](G: Applicative[G]): Applicative[({type f[x] = (F[x], G[x])})#f] = {
     val self = this
     new Applicative[({type f[x] = (F[x], G[x])})#f] {
       def unit[A](a: => A): (F[A], G[A]) = (self.unit(a), G.unit(a))
 
-      def apply[A, B](fab: (F[A => B], G[A => B]))(fa: (F[A], G[A])): (F[B], G[B]) =
+      override def apply[A, B](fab: (F[A => B], G[A => B]))(fa: (F[A], G[A])): (F[B], G[B]) =
         (self.apply(fab._1)(fa._1), G.apply(fab._2)(fa._2))
     }
   }
@@ -62,7 +63,7 @@ trait Applicative[F[_]] extends Functor[F] {
     new Applicative[({type f[x] = F[G[x]]})#f] {
       def unit[A](ca: => A): F[G[A]] = self.unit(G.unit(ca))
 
-      def apply[A, B](cab: F[G[A => B]])(ca: F[G[A]]): F[G[B]] = self.map2(cab, ca)(G.apply(_)(_))
+      override def apply[A, B](cab: F[G[A => B]])(ca: F[G[A]]): F[G[B]] = self.map2(cab, ca)(G.apply(_)(_))
     }
   }
 
@@ -79,7 +80,7 @@ object Applicative {
   def validationApplicative[E] = new Applicative[({type f[x] = Validation[E, x]})#f] {
     def unit[A](a: => A): Validation[E, A] = Success(a)
 
-    def map2[A, B, C](fa: Validation[E, A], fb: Validation[E, B])(f: (A, B) => C): Validation[E, C] = (fa, fb) match {
+    override def map2[A, B, C](fa: Validation[E, A], fb: Validation[E, B])(f: (A, B) => C): Validation[E, C] = (fa, fb) match {
       case (Success(a), Success(b)) => Success(f(a, b))
       case (Failure(eah, eat), Failure(ebh, ebt)) => Failure(ebh, Vector(eah) ++ eat ++ ebt)
       case (Failure(eh, et), _) => Failure(eh, et)
@@ -91,7 +92,7 @@ object Applicative {
   def idApplicative: Applicative[Id] = new Applicative[Id] {
     def unit[A](a: => A) = Id.apply(a)
 
-    def apply[A, B](fab: Id[A => B])(fa: Id[A]): Id[B] = fa.flatMap(a => fab.map(f => f(a)))
+    override def apply[A, B](fab: Id[A => B])(fa: Id[A]): Id[B] = fa.flatMap(a => fab.map(f => f(a)))
   }
 }
 
