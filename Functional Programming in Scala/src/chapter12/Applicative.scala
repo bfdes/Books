@@ -64,6 +64,8 @@ trait Applicative[F[_]] extends Functor[F] {
       def unit[A](ca: => A): F[G[A]] = self.unit(G.unit(ca))
 
       override def apply[A, B](cab: F[G[A => B]])(ca: F[G[A]]): F[G[B]] = self.map2(cab, ca)(G.apply(_)(_))
+//      override def map2[A, B, C](fa: F[G[A]], fb: F[G[B]])(f: (A, B) => C): F[G[C]] =
+//        self.map2(fa, fb)((ga, gb) => G.map2(ga, gb)(f))
     }
   }
 
@@ -96,5 +98,34 @@ object Applicative {
   }
 }
 
-// Ex 12.7 Paper exercise
-// Ex 12.10 Paper exercise
+// Ex 12.7
+/*
+We prove that the left (map2(unit(()), fa)((_, a) -> a) = fa) and right identities (map2(fa, unit(()))((a, _) -> a))
+hold for the implementation of map2 above.
+
+Left identity:
+map2(unit(()), fa)((_, a) -> a) = flatMap(unit(()))(b -> map(fa)(a -> a))
+                                = flatMap(unit(()))(b -> fa)
+                                = fa
+
+Right identity:
+map2(fa, unit(()))((a, _) -> a) = flatMap(fa)(a -> map(unit(()))(b -> a))
+                                = flatMap(fa)(a -> unit(a))
+                                = map(fa)(identity)
+                                = fa  since Monads obey the Functor laws.
+
+Associativity TODO
+
+
+Naturality of Product
+We show that map2(fa, fb)(productF(f, g)) = product(map(fa)(f), map(fb)(g)),
+where productF(f: I -> O, g: I2 -> O2) = (i, i2) -> (f(i), g(i2)).
+
+map2(fa, fb)(productF(f, g))  = flatMap(fa)(a -> map(fb)(b -> productF(f, g)(a, b))) definition of map2 for monads
+                              = flatMap(fa)(a -> map(fb)(b -> (f(a), g(b))))
+                              = map2(fa.map(f), fb.map(g))((_, _)) using the definition again
+                              = product(fa.map(f), fb.map(g))
+QED
+ */
+
+// Ex 12.10 TODO

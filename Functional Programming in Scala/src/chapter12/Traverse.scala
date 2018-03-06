@@ -1,6 +1,5 @@
 package chapter12
 
-import chapter10.Monoid
 import chapter11.{Functor, Id}
 
 trait Traverse[F[_]] extends Functor[F]{

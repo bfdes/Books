@@ -1,6 +1,7 @@
 package chapter12
 
 // All Monads are applicative Functors, but not all Applicative Functors are Monads
+// See Ex 12.7
 trait Monad[F[_]] extends Applicative[F] {
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
