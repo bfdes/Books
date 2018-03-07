@@ -17,6 +17,20 @@ trait Monad[F[_]] extends Applicative[F] {
     flatMap(fa)(a => map(fb)(b => f(a, b)))
 
   def apply[A, B](fab: F[A => B])(fa: F[A]): F[B] = map2(fab, fa)((aToB, a) => aToB(a))
+
+  // Ex 12.11
+  /*
+  def compose[G[_]](G: Monad[G]) = {
+    val self = this
+    new Monad[({type f[x] = F[G[x]]})#f] {
+      def unit[A](a: => A): F[G[A]] = self.unit(G.unit(a))
+
+      def flatMap[A, B](fa: F[G[A]])(f: A => F[G[B]]): F[G[B]] =
+        self.flatMap(fa)(ga => G.flatMap(ga)(a => ???))
+        // We would need f to have the return type G[F[B]] instead and a way of transforming G[F[B]] to F[G[B]]
+    }
+  }
+   */
 }
 
 object Monad {
