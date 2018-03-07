@@ -63,9 +63,8 @@ trait Applicative[F[_]] extends Functor[F] {
     new Applicative[({type f[x] = F[G[x]]})#f] {
       def unit[A](ca: => A): F[G[A]] = self.unit(G.unit(ca))
 
-      override def apply[A, B](cab: F[G[A => B]])(ca: F[G[A]]): F[G[B]] = self.map2(cab, ca)(G.apply(_)(_))
-//      override def map2[A, B, C](fa: F[G[A]], fb: F[G[B]])(f: (A, B) => C): F[G[C]] =
-//        self.map2(fa, fb)((ga, gb) => G.map2(ga, gb)(f))
+      override def map2[A, B, C](fa: F[G[A]], fb: F[G[B]])(f: (A, B) => C): F[G[C]] =
+        self.map2(fa, fb)((ga, gb) => G.map2(ga, gb)(f))
     }
   }
 
@@ -114,7 +113,20 @@ map2(fa, unit(()))((a, _) -> a) = flatMap(fa)(a -> map(unit(()))(b -> a))
                                 = map(fa)(identity)
                                 = fa  since Monads obey the Functor laws.
 
-Associativity TODO
+Associativity
+We show that product(product(fa, fb), fc) = map(product(fa, product(fb, fc)))(assoc)
+where assoc = (a, (b, c)) -> ((a, b), c).
+
+product(fa, product(fb, fc))  = map2(fa, product(fb, fc)((_, _)))
+                              = flatMap(fa)(a -> map(product(fb, fc))(p -> (a, p)))
+                              = flatMap(fa)(a -> flatMap(product(fb, fc))(p -> unit((a, p))))
+                              = flatMap(fa)(a -> flatMap(map2(fb, fc)((_, _)))(p -> unit((a, p))))
+                              = flatMap(fa)(a -> unit((a, (b, c))))
+                              = unit((a, (b, c)))
+
+After liberal use of the Monad definitions of map2, product and map.
+
+Similarly, product(product(fa, fb), fc) = unit(((a, b), c)) and the result follows.
 
 
 Naturality of Product
