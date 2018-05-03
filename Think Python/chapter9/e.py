@@ -1,4 +1,6 @@
 # Ex 9.2
+from os import path
+
 def has_no_e(word: str):
   for char in word:
     if char == 'e':
@@ -6,7 +8,8 @@ def has_no_e(word: str):
   return True
 
 if __name__ == '__main__':
-  fin = open('words.txt')
+  sample = path.abspath(path.join(__file__, '../words.txt'))
+  fin = open(sample)
   count = 0
   lines = 0
   for line in fin:
