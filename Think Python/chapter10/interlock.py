@@ -1,4 +1,5 @@
 # Ex 10.12
+from os import path
 from wordlist import as_list
 from bisection import in_bisect
 
@@ -13,7 +14,8 @@ def split(word):
   return (left, right)
 
 if __name__ == '__main__':
-  words = as_list('words.txt')
+  sample = path.abspath(path.join(__file__, '../words.txt'))
+  words = as_list(sample)
   count = 0
   for word in words:
     left, right = split(word)

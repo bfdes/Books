@@ -10,7 +10,7 @@ def nested_sum(l):
   return total
 
 # Ex 10.2
-def cumsum(l):
+def cumulative_sum(l):
   out = []
   total = 0
   for e in l:
