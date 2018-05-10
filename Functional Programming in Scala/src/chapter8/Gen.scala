@@ -8,14 +8,21 @@ case class Gen[+A](sample: State[RNG, A]) {
   def flatMap[B](f: A => Gen[B]): Gen[B] =
     Gen(sample.flatMap(a => f(a).sample))
 
-  def listOfN[B](size: Gen[Int]): Gen[List[A]] =
-    size.flatMap(n => Gen(State.sequence(List.fill(n)(this.sample))))
+  def listOfN(size: Gen[Int]): Gen[List[A]] =
+    size.flatMap(n => Gen.listOfN(n, this))
 
   // Ex 8.10
   def unsized: SGen[A] = SGen(_ => this)
 }
 
 object Gen {
+  /**
+    * Generates a property for the given generator and predicate function.
+    * @param g generator, sampled to form test cases
+    * @param f predicate function to verify
+    * @tparam A type of elements obtained from sampling the generator
+    * @return property to verify
+    */
   def forAll[A](g: Gen[A])(f: A => Boolean): Prop = Prop {
     (_, n,rng) => randomStream(g)(rng).zip(Stream.from(0)).take(n).map {
       case (a, i) => try {
@@ -26,12 +33,12 @@ object Gen {
 
   def forAll[A](g: Int => Gen[A])(f: A => Boolean): Prop = Prop {
     (max,n,rng) =>
-      val casesPerSize = (n - 1) / max + 1
+      val casesPerSize = (n - 1) / max + 1  // We must generate the same number of random cases for each size
       val props: Stream[Prop] =
-        Stream.from(0).take((n min max) + 1).map(i => forAll(g(i))(f))
+        Stream.from(0).take((n min max) + 1).map(i => forAll(g(i))(f))  // g(i) will give us a generator for the given size, e.g. List(), List(j), List(j, k)
       val prop: Prop =
         props.map(p => Prop { (max, _, rng) =>
-          p.run(max, casesPerSize, rng)
+          p.run(max, casesPerSize, rng)  // Fix the number of test cases
         }).toList.reduce(_ && _)
       prop.run(max,n,rng)
   }
@@ -63,7 +70,7 @@ object Gen {
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(size => listOfN(size, g))
 
   // Ex 8.13
-  def listOf1[A](g: Gen[A]): SGen[List[A]] = ???
+  def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(size => listOfN(size max 1, g))
 
   /** Generates an infinite stream of A values by repeatedly sampling a generator*/
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
