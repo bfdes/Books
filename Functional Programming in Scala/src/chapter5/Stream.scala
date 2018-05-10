@@ -69,6 +69,8 @@ trait Stream[+A] {
       case (Empty, Cons(h2, t2)) => Some(((None, Some(h2())), (Empty, t2())))
     })
 
+  def zip[B](stream: Stream[B]): Stream[(A, B)] = zipWith(stream)((_, _))
+
   // Ex 5.14
   def startsWith[B >: A](stream: Stream[B]): Boolean =
     zipAll(stream).takeWhile(!_._2.isEmpty).forAll({
@@ -84,6 +86,8 @@ trait Stream[+A] {
 
   // Ex 5.16 TODO
   def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = ???
+
+  def find(f: A => Boolean): Option[A] = foldRight(Option.empty[A])((a, b) => if(f(a)) Some(a) else b)
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]

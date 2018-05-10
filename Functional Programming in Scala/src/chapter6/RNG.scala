@@ -32,11 +32,13 @@ object RNG {
     (if(int < 0) -(int+1) else int, newRNG)
   }
 
+  def boolean(rng: RNG): (Boolean, RNG) = map(nonNegativeInt)(_ % 2 == 0)(rng)
+
   // Ex 6.2
   def double(rng: RNG): (Double, RNG) = {
     val (int, newRNG) = nonNegativeInt(rng)
     (int / (Int.MaxValue.toDouble + 1.0), newRNG)
-  }  // Ex 6.5 def double(rng: RNG): (Double, RNG) = map(nonNegativeInt)(_ / (Int.MaxValue.toDouble + 1.0))
+  }  // Ex 6.5 def double(rng: RNG): (Double, RNG) = map(nonNegativeInt)(_ / (Int.MaxValue.toDouble + 1.0))(rng)
 
   // Ex 6.3
   def intDouble(rng: RNG): ((Int, Double), RNG) = {
