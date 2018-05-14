@@ -1,12 +1,9 @@
 package chapter7
 
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.{Callable, CountDownLatch, ExecutorService, Future}
-
-import com.sun.tools.internal.xjc.reader.gbind.Choice
+import java.util.concurrent.{Callable, CountDownLatch, ExecutorService}
 
 import scala.concurrent.duration.TimeUnit
-import scala.language.implicitConversions
 
 private case class UnitFuture[A](get: A) extends Future[A] {
   def isDone: Boolean = true
@@ -123,7 +120,10 @@ object Par {
   }
 
   def map[A,B](pa: Par[A])(f: A => B): Par[B] =
-    map2(pa, unit(()))((a,_) => f(a))  // In practice implement from scratch as the second thread spawned does nothing.
+    es => new Future[B] {
+      override private[chapter7] def apply(cb: B => Unit): Unit =
+        pa(es)(a => eval(es)(cb(f(a))))
+    }
 
   // Ex 7.4
   def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
@@ -139,22 +139,33 @@ object Par {
   def parFilter[A](list: List[A])(f: A => Boolean): Par[List[A]] = lazyUnit(list.filter(f))
 
   // Ex 7.11
-  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = ???
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = flatMap(n)(i => choices(i))
 
-  def choice[A](choice: Par[Boolean])(lhs: Par[A], rhs: Par[A]): Par[A] = ???
+  def choice[A](lOrR: Par[Boolean])(lhs: Par[A], rhs: Par[A]): Par[A] = flatMap(lOrR)(if(_) lhs else rhs)
 
   // Ex 7.12
-  def choiceMap[K, V](choice: Par[K])(choices: Map[K, Par[V]]): Par[V] = ???
+  def choiceMap[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] = flatMap(key)(choices)
 
-  // Ex 7.13
-  def flatMap[A, B](a: Par[A])(f: A => Par[B]): Par[B] =
+  // Ex 7.13, 7.14
+  def flatMap[A, B](p: Par[A])(f: A => Par[B]): Par[B] =
     es => new Future[B] {
-      override private[chapter7] def apply(cb: B => Unit): Unit = ???
+      override private[chapter7] def apply(cb: B => Unit): Unit = {
+        p(es)(a => f(a)(es)(cb))
+      }
     }
 
-  // Ex 7.14
-  def join[A](a: Par[Par[A]]): Par[A] = ???
+  // def flatMap[A, B](p: Par[A])(f: A => Par[B]): Par[B] = join(map(p)(f))
 
+  def join[A](ppa: Par[Par[A]]): Par[A] = flatMap(ppa)(identity)
+
+  /*
+   def join[A](ppa: Par[Par[A]]): Par[A] =
+  	es => new Future[A] {
+      override def apply(cb: A => Unit): Unit = {
+        ppa(es)(pa => pa(es)(cb))
+      }
+    }
+   */
 
   /**
     * Fully evaluates the Par instance within the given context, blocking the current thread while it awaits the result.
@@ -174,5 +185,4 @@ object Par {
 
     ref.get // n.b. blocks the calling thread, but this is unavoidable if one wishes to receive a result of type A.
   }
-
 }
