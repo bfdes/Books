@@ -130,7 +130,7 @@ object Par {
 
   // Ex 7.5
   def sequence[A](list: List[Par[A]]): Par[List[A]] =
-    list.foldRight(unit(List.empty[A]))((a, b) => map2(a, b)(_::_))
+    list.foldRight(unit(List.empty[A]))((a, b) => map2(a, fork(b))(_::_))
 
   def parMap[A, B](list: List[A])(f: A => B): Par[List[B]] =
     sequence(list.map(asyncF(f)))
