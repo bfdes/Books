@@ -92,6 +92,8 @@ sealed trait List[+A] {
   // Ex. 3.21
   // def filter(f: A => Boolean): List[A] = flatMap(a => if(f(a)) List(a) else Nil)
 
+  def startsWith[B >: A](l: List[B]): Boolean =
+    (this.length >= l.length) && zip(this, l).foldRight(true)({ case ((l, r), acc) => (l == r) && acc})
 }
 
 case object Nil extends List[Nothing]
@@ -120,6 +122,11 @@ object List {
       case (Cons(a, as), Cons(b, bs)) => Cons(f(a, b), zipWith(as, bs)(f))
     }
 
+  def zip[A, B](l: List[A], r: List[B]): List[(A, B)] = zipWith(l, r)((_, _))
+
   // Ex 3.24
-  // TODO
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match {
+    case Cons(_, t) => sup.startsWith(sub) || hasSubsequence(t, sub)
+    case Nil => sub == Nil
+  }
 }
