@@ -1,12 +1,19 @@
 package chapter8
 
+import java.util.concurrent.Executors
+
 import chapter5.Stream
 import chapter6.{RNG, State}
+import chapter7.Par
+import chapter7.Par._
 
 case class Gen[+A](sample: State[RNG, A]) {
   // Ex 8.6
   def flatMap[B](f: A => Gen[B]): Gen[B] =
     Gen(sample.flatMap(a => f(a).sample))
+
+  def map[B](f: A => B): Gen[B] =
+    flatMap(a => Gen.unit(f(a)))
 
   def listOfN(size: Gen[Int]): Gen[List[A]] =
     size.flatMap(n => Gen.listOfN(n, this))
@@ -46,6 +53,12 @@ object Gen {
   def forAll[A](g: SGen[A])(f: A => Boolean): Prop =
     forAll(g.forSize)(f)
 
+  def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(map2(S, g)((_, _))) { case (s, a) => run(s)(f(a)) }
+
+  def map2[A, B, C](ga: Gen[A], gb: Gen[B])(f: (A, B) => C): Gen[C] =
+    ga.flatMap(a => gb.map(b => f(a, b)))
+
   // Ex 8.4
   def choose(start: Int, stopExclusive: Int): Gen[Int] = Gen(
     State(RNG.nonNegativeInt).map(start + _ % (stopExclusive-start))  // Unbiased if the interval divides into Int.Max evenly (?)
@@ -63,14 +76,33 @@ object Gen {
     State(rng => RNG.boolean(rng)).flatMap(if(_) g1.sample else g2.sample)
   )
 
-  // Ex 8.8 TODO
-  def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = ???
+  // Ex 8.8
+  def weighted[A](g1: (Gen[A], Double), g2: (Gen[A], Double)): Gen[A] = {
+    val w1 = g1._2
+    val w2 = g2._2
+    require(w1 >= 0 && w2 >= 0)
+
+    val interval = w1 / (w1 + w2)
+    Gen(State(rng => RNG.double(rng)).flatMap(d => if(d <= interval) g1._1.sample else g2._1.sample))
+  }
 
   // Ex 8.12
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(size => listOfN(size, g))
 
   // Ex 8.13
   def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(size => listOfN(size max 1, g))
+
+  def check(p: => Boolean): Prop = Prop { (_, _, _) =>
+    if(p) Proved else Falsified("()", 0)
+  }
+
+  val S = weighted(
+    choose(1, 4).map(Executors.newFixedThreadPool) -> .75,
+    unit(Executors.newCachedThreadPool) -> .25
+  )
+
+  def equal[A](p: Par[A], q: Par[A]): Par[Boolean] = Par.map2(p, q)(_ == _)
+
 
   /** Generates an infinite stream of A values by repeatedly sampling a generator*/
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =

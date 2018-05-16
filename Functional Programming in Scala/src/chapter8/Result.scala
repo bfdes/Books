@@ -10,6 +10,10 @@ case object Passed extends Result {
   def isFalsified: Boolean = false
 }
 
+case object Proved extends Result {
+  override def isFalsified: Boolean = false
+}
+
 case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
   def isFalsified: Boolean = true
 }

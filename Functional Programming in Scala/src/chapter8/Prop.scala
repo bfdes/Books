@@ -9,7 +9,7 @@ case class Prop(run: (Prop.MaxSize, Prop.TestCases, RNG) => Result) {
   // Ex 8.9
   def &&(p: Prop): Prop = Prop((maxsize, n, rng) =>
     run(maxsize, n, rng) match {
-      case Passed => p.run(maxsize, n, rng)
+      case Passed | Proved => p.run(maxsize, n, rng)
       case f: Falsified => f
     }
   )
@@ -17,8 +17,8 @@ case class Prop(run: (Prop.MaxSize, Prop.TestCases, RNG) => Result) {
   // Ex 8.9
   def ||(p: Prop): Prop = Prop((maxsize, n, rng) =>
     run(maxsize, n, rng) match {
-      case Passed => Passed
-      case _ => p.run(maxsize, n, rng)
+      case Falsified(_, _) => p.run(maxsize, n, rng)
+      case p => p
     }
   )
 }
@@ -35,6 +35,8 @@ object Prop {
         println(s"! Falsified after $n passed tests:\n $msg")
       case Passed =>
         println(s"+ OK, passed $testCases tests.")
+      case Proved =>
+        println(s"+ OK, proved property.")
     }
 
   val maxProp = Gen.forAll(Gen.listOf(Gen.choose(-10, 10)))( n => {
