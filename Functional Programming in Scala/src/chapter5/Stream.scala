@@ -84,8 +84,14 @@ trait Stream[+A] {
       case Empty => None
     }) append Empty
 
-  // Ex 5.16 TODO
-  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = ???
+  // Ex 5.16
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = foldRight((empty[B], z))({case (a, (rs, rb)) =>
+      // Book's GitHub notes remind us that (rs, rb) are passed by-name and used by-name so memoize:
+      lazy val mrs = rs
+      lazy val mrb = rb
+      val b = f(a, mrb)
+      (cons(b, mrs), b)
+    })._1
 
   def find(f: A => Boolean): Option[A] = foldRight(Option.empty[A])((a, b) => if(f(a)) Some(a) else b)
 }
