@@ -71,6 +71,8 @@ object Gen {
 
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = Gen(State.sequence(List.fill(n)(g.sample)))
 
+  def triplet[A](g: Gen[A]): Gen[(A, A, A)] = listOfN(3, g).map({case List(a, b, c) => (a, b, c)})
+
   // Ex 8.7
   def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = Gen(
     State(rng => RNG.boolean(rng)).flatMap(if(_) g1.sample else g2.sample)
