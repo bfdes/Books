@@ -1,5 +1,8 @@
 package chapter10
 
+import chapter7.Par._
+import chapter8.{Gen, Prop}
+
 trait Monoid[A] {
   // Associative binary operation op on A
   def op(a1: A, a2: A): A
@@ -55,8 +58,16 @@ object Monoid {
     def zero: A = m.zero
   }
 
-  // Ex 10.4 TODO
-  // Need to do chapter 8 first
+  def par[A](m: Monoid[A]): Monoid[Par[A]] = new Monoid[Par[A]] {
+    override def op(a1: Par[A], a2: Par[A]): Par[A] = map2(a1, a2)(m.op)
+
+    override def zero: Par[A] = unit(m.zero)
+  }
+
+  // Ex 10.4
+  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =
+    Gen.forAll(gen)(a => m.op(a, m.zero) == a && m.op(m.zero, a) == a) &&
+    Gen.forAll(Gen.triplet(gen))({case (a, b, c) => m.op(m.op(a, b), c) == m.op(a, m.op(b, c)) })
 
   def concatenate[A](list: List[A], m: Monoid[A]): A =
     list.foldLeft(m.zero)(m.op)
@@ -84,8 +95,16 @@ object Monoid {
       m.op(foldMap(l, m)(f), foldMap(r, m)(f))
     }
 
-  // Ex 10.8 TODO
-  // Need to do chapter 7 first
+  // Ex 10.8
+  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
+    if(v.isEmpty) {
+      unit(m.zero)
+    } else if(v.length == 1) {
+      unit(f(v(0)))
+    } else {
+      val (l, r) = v.splitAt(v.length / 2)
+      par(m).op(fork(parFoldMap(l, m)(f)), fork(parFoldMap(r, m)(f)))
+    }  // Book's GitHub repo has an implementation that performs a parallel map then a reduce.
 
   // Ex 10.9
   // Represent each possibly ordered section with Some(min, max, isOrdered), None if an empty section
