@@ -1,5 +1,7 @@
 package chapter15
 
+import chapter12.Monad
+
 /*
 Transforms an input of type I to an output of type O.
  */
@@ -16,6 +18,20 @@ sealed trait Process[I, O] {
     case Halt() => Stream.Empty
   }
 
+  def map[O2](f: O => O2): Process[I,O2] = this |> lift(f)
+
+  def ++(p: => Process[I,O]): Process[I,O] = this match {
+    case Halt() => p
+    case Emit(h, t) => Emit(h, t ++ p)
+    case Await(recv) => Await(recv andThen (_ ++ p))
+  }
+
+  def flatMap[O2](f: O => Process[I,O2]): Process[I,O2] = this match {
+    case Halt() => Halt()
+    case Emit(h, t) => f(h) ++ t.flatMap(f)
+    case Await(recv) => Await(recv andThen (_ flatMap f))
+  }
+
   def repeat: Process[I, O] = {
     def go(p: Process[I, O]): Process[I, O] = p match {
       case Halt() => go(this)  // Restart the process if it stops on its own
@@ -29,7 +45,32 @@ sealed trait Process[I, O] {
   }
 
   // Ex 15.5
-  def |>[O2](p2: Process[O, O2]): Process[I, O2] = ???
+  def |>[O2](p2: Process[O, O2]): Process[I, O2] = p2 match {
+    case Halt() => Halt()
+    case Emit(h, t) => Emit(h, this |> t)
+    case Await(f) => this match {
+      case Halt() => Halt() |> f(None)
+      case Emit(h, t) => t |> f(Some(h))
+      case Await(g) => Await(i => g(i) |> p2)
+    }
+  }
+
+  // Ex 15.6
+  def zipWithIndex: Process[I, (O, Int)] = {
+    def go(p: Process[I, O], n: Int): Process[I, (O, Int)] = p match {
+      case Halt() => Halt()
+      case Emit(h, t) => Emit((h, n), go(t, n+1))
+      case Await(recv) => Await {i => go(recv(i), n)}
+    }
+    go(this, 0)
+  }
+
+  // Ex 15.7
+  def feed(maybeI: Option[I]): Process[I, O] = this match {
+    case Halt() => Halt()
+    case Emit(h, t) => Emit(h, t feed maybeI)
+    case Await(recv) => recv(maybeI)
+  }
 }
 
 case class Emit[I, O](head: O, tail: Process[I, O] = Halt[I, O]()) extends Process[I, O]
@@ -110,4 +151,27 @@ object Process {
       }
     go(0.0, 1)
   }
+
+  // Ex 15.7 A, B less tedious to write than O, O2
+  def zip[I, A, B](p: Process[I, A], p2: Process[I, B]): Process[I, (A, B)] = (p, p2) match {
+    case (Halt(), _) | (_, Halt()) => Halt()
+    case (Emit(ha, ta), Emit(hb, tb)) => Emit((ha, hb), zip(ta, tb))
+    case (Await(f), aOrE) => Await(i => zip(f(i), aOrE.feed(i)))
+    case (aOrE, Await(g)) => Await(i => zip(aOrE.feed(i), g(i)))  // Is feed really quite right here?
+  }
+
+  // def mean: Process[Double, Double] = zip(sum, count).map { case (acc, i) => acc / i }
+
+
+  // Ex 15.8
+  def exists[I](f: I => Boolean): Process[I, Boolean] = Await {
+    case Some(i)  => if(f(i)) Emit(true) else Emit(false, exists(f))
+    case None => Halt()
+  }  // n.b. This is the form that halts and yields all intermediate results
+
+  def monad[I]: Monad[({ type f[x] = Process[I,x]})#f] =
+    new Monad[({ type f[x] = Process[I,x]})#f] {
+      def unit[O](o: => O): Process[I, O] = Emit(o)
+      def flatMap[O,O2](p: Process[I,O])(f: O => Process[I,O2]): Process[I,O2] = p flatMap f
+    }
 }
