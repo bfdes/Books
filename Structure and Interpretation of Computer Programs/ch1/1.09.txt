@@ -1,0 +1,1 @@
+Both procedures are recurisive, but the first describes a recurive process whereas the second describes an iterative one. 
